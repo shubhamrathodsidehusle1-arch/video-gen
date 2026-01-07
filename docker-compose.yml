@@ -62,6 +62,23 @@ services:
     networks:
       - vibeclip-network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vibeclip-frontend
+    environment:
+      VITE_API_URL: http://localhost:5000
+      VITE_API_VERSION: v1
+      VITE_APP_NAME: VibeClip AI
+      VITE_DEV_MODE: true
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - vibeclip-network
+
 volumes:
   mongo_data:
   redis_data:
