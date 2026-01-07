@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: vibeclip-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibeclip-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: vibeclip-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibeclip-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vibeclip-backend
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:changeme@mongo:27017/vibeclip?authSource=admin
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: changeme
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-key-change-in-production-at-least-32-chars
+      JWT_REFRESH_SECRET: dev-refresh-key-change-in-production-at-least-32-chars
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./uploads:/app/uploads
+    networks:
+      - vibeclip-network
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  vibeclip-network:
+    driver: bridge
