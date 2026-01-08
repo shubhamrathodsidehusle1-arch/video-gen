@@ -1,18 +1,19 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:6.0
-    container_name: vibeclip-mongo
+  postgres:
+    image: postgres:15-alpine
+    container_name: vibeclip-postgres
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: changeme
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: vibeclip
     ports:
-      - "27017:27017"
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,23 +43,40 @@ services:
     environment:
       NODE_ENV: development
       PORT: 5000
-      MONGODB_URI: mongodb://admin:changeme@mongo:27017/vibeclip?authSource=admin
-      MONGO_USERNAME: admin
-      MONGO_PASSWORD: changeme
+      DATABASE_URL: postgresql://postgres:changeme@postgres:5432/vibeclip?schema=public
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: dev-secret-key-change-in-production-at-least-32-chars
-      JWT_REFRESH_SECRET: dev-refresh-key-change-in-production-at-least-32-chars
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      JWT_SECRET: dev-secret-key-change-in-production-at-least-32-chars-long
+      JWT_REFRESH_SECRET: dev-refresh-key-change-in-production-at-least-32-chars-long
       FRONTEND_URL: http://localhost:3000
     ports:
       - "5000:5000"
     depends_on:
-      mongo:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
       - ./uploads:/app/uploads
+    networks:
+      - vibeclip-network
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: vibeclip-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:changeme@postgres:5432/vibeclip
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - vibeclip-network
 
@@ -80,7 +98,7 @@ services:
       - vibeclip-network
 
 volumes:
-  mongo_data:
+  postgres_data:
   redis_data:
 
 networks:

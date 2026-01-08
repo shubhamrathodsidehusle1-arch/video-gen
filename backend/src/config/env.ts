@@ -8,12 +8,14 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).default('5000'),
 
   // Database
-  MONGODB_URI: z.string().min(1),
-  MONGO_USERNAME: z.string().min(1),
-  MONGO_PASSWORD: z.string().min(1),
+  DATABASE_URL: z.string().min(1),
 
   // Redis
   REDIS_URL: z.string().url(),
+
+  // Celery/Job Queue
+  CELERY_BROKER_URL: z.string().optional(),
+  CELERY_RESULT_BACKEND: z.string().optional(),
 
   // JWT
   JWT_SECRET: z.string().min(32),

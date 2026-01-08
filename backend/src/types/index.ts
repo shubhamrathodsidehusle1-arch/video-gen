@@ -28,9 +28,9 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 export interface AuthUser {
-  id: string;
+  userId: string;
   email: string;
-  role?: string;
+  role: string;
 }
 
 export interface AuthenticatedRequest extends Request {
