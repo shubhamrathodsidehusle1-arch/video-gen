@@ -3,6 +3,16 @@ node_modules/
 package-lock.json
 yarn.lock
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
 # Environment
 .env
 .env.local
@@ -11,6 +21,9 @@ yarn.lock
 # Build output
 dist/
 build/
+
+# Prisma
+backend/src/generated/
 
 # IDE
 .vscode/
@@ -31,6 +44,6 @@ yarn-debug.log*
 # Runtime data
 uploads/
 
-# Docker
-.dockerignore
-Dockerfile
+# Docker (keep for now)
+# .dockerignore
+# Dockerfile

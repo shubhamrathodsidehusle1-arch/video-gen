@@ -5,6 +5,11 @@ import { corsConfig } from './middleware/corsConfig.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { logger } from './utils/logger.js';
+import authRoutes from './routes/auth.routes.js';
+import jobRoutes from './routes/job.routes.js';
+import projectRoutes from './routes/project.routes.js';
+import userRoutes from './routes/user.routes.js';
+import healthRoutes from './routes/health.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -29,15 +34,12 @@ export function createApp(): Express {
     });
   });
 
-  // API routes (to be added in later phases)
-  app.get('/api/v1/health', (req: Request, res: Response) => {
-    res.json({
-      service: 'vibeclip-api',
-      status: 'running',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    });
-  });
+  // API routes
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/jobs', jobRoutes);
+  app.use('/api/v1/projects', projectRoutes);
+  app.use('/api/v1/users', userRoutes);
+  app.use('/api/v1/health', healthRoutes);
 
   // 404 handler
   app.use((req: Request, res: Response) => {

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1'
 
 class ApiService {
@@ -33,12 +33,25 @@ class ApiService {
       }
     )
 
-    // Response interceptor to handle errors
+    // Response interceptor to handle errors and token refresh
     this.api.interceptors.response.use(
       (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          this.handleUnauthorized()
+      async (error) => {
+        const originalRequest = error.config
+        
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true
+          
+          // Try to refresh token
+          const refreshed = await this.refreshAuthToken()
+          if (refreshed) {
+            // Retry the original request with new token
+            originalRequest.headers.Authorization = `Bearer ${this.getAuthToken()}`
+            return this.api(originalRequest)
+          } else {
+            // Refresh failed, logout user
+            this.handleUnauthorized()
+          }
         }
         return Promise.reject(error)
       }
@@ -51,6 +64,37 @@ class ApiService {
       return localStorage.getItem(tokenKey)
     }
     return null
+  }
+
+  private async refreshAuthToken(): Promise<boolean> {
+    try {
+      const refreshTokenKey = import.meta.env.VITE_REFRESH_TOKEN_KEY || 'vibeclip_refresh_token'
+      const refreshToken = localStorage.getItem(refreshTokenKey)
+      
+      if (!refreshToken) {
+        return false
+      }
+      
+      // Call refresh endpoint without auth interceptor
+      const response = await axios.post(`${API_BASE_URL}/api/${API_VERSION}/auth/refresh`, {
+        refreshToken
+      })
+      
+      if (response.data.success && response.data.data.tokens) {
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens
+        const tokenKey = import.meta.env.VITE_AUTH_TOKEN_KEY || 'vibeclip_token'
+        
+        localStorage.setItem(tokenKey, accessToken)
+        localStorage.setItem(refreshTokenKey, newRefreshToken)
+        
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      return false
+    }
   }
 
   private handleUnauthorized() {

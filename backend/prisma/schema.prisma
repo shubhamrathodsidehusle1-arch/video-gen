@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model for authentication and user management
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("user") // user, admin
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  jobs      Job[]
+  projects  Project[]
+  apiKeys   ApiKey[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// Job model for video generation jobs
+model Job {
+  id           String   @id @default(uuid())
+  userId       String
+  status       String   @default("pending") // pending, processing, completed, failed, cancelled
+  inputPrompt  String   @db.Text
+  outputUrl    String?
+  metadata     Json?    // Store additional job metadata
+  retryCount   Int      @default(0)
+  errorMessage String?  @db.Text
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("jobs")
+}
+
+// Project model for organizing jobs
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  color       String?  @default("#6366f1") // For UI organization
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs Job[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+// ProviderHealth model for monitoring AI providers
+model ProviderHealth {
+  id            String   @id @default(uuid())
+  providerName  String   @unique
+  status        String   @default("healthy") // healthy, degraded, down
+  lastChecked   DateTime @default(now())
+  errorRate     Float    @default(0.0)
+  responseTime  Float?   // Average response time in ms
+  metadata      Json?    // Additional provider-specific data
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([providerName])
+  @@index([lastChecked])
+  @@map("provider_health")
+}
+
+// ApiKey model for API authentication
+model ApiKey {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String   @unique
+  name      String?  // Friendly name for the key
+  scopes    String[] @default([]) // Array of permissions
+  lastUsed  DateTime?
+  expiresAt DateTime?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([key])
+  @@index([expiresAt])
+  @@map("api_keys")
+}

@@ -1,6 +1,6 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
-import { connectDatabase } from './config/database.js';
+import { connectDatabase, disconnectDatabase } from './config/prisma.js';
 import { connectRedis } from './config/redis.js';
 import { logger } from './utils/logger.js';
 
@@ -25,6 +25,7 @@ async function startServer(): Promise<void> {
       logger.info('SIGINT signal received: closing HTTP server');
       server.close(async () => {
         logger.info('HTTP server closed');
+        await disconnectDatabase();
         process.exit(0);
       });
     });
